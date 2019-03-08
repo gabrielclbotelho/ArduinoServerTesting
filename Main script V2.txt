@@ -1,0 +1,199 @@
+/*
+ * Webserver Homemade trial
+ * 
+ * 
+ * my phone ip is 10.0.0.7
+ */
+
+ #include <SPI.h>
+ #include <Ethernet.h>
+
+//ethernet stuff
+ byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+ #if true
+  IPAddress ip (10,0,0,10);
+ #else
+  byte ip[] = {192,168,1,3};
+ #endif
+ EthernetServer server = EthernetServer(80);
+ EthernetClient client;
+
+ // other functionality and variables
+ int time;
+ int* input;
+ char thing;
+ String request;
+ bool renewed = true;
+ bool StartSequence = true; 
+ int compare(String inp);
+ void execute(int inp);
+
+void setup()
+{
+  Serial.begin(9600);
+  while(!Serial) {}
+  Serial.println("");
+  Serial.println("Beginning Ethernet Connection...");
+  time = millis();
+
+  if(false) //Ethernet.begin(mac))
+  {
+    while((millis()- time)<100){} // make sure there is a 100 ms second gap for user effect counting connection time
+    Serial.println ("DHCP Working");
+    Serial.print("Server IP is: ");
+    Serial.print(Ethernet.localIP());
+    Serial.println("");
+  }
+  else
+  {
+    Serial.println("DHCP Failed"); 
+    Ethernet.begin(mac,ip);
+    Serial.print("Server IP is: ");
+    Serial.print(Ethernet.localIP());
+  }
+  server.begin();
+}
+
+
+void loop()
+{
+  client = server.available();
+  if(client && renewed) //allows for first time print then awaits client renewal
+  {
+    Serial.println("Server Established");
+    renewed = false;
+  }
+
+  if(client)
+  {
+    if(StartSequence && client.connected())
+    {
+      Serial.println("Client Connected");
+      server.println("<!DOCTYPE html> <html> <head> <title> Arduino Sever </title> </head>");
+      server.println("<body> <h1> Gabe's Arduino Server Control Interface </h1> <p> test run </p> </body> </html>");
+      server.println("<p>Hello client, please issue command</p>");
+      server.println("Type the following for arduino board control<br />");
+      server.println("Type \"red\" to toggle Red LED.<br />");
+      server.println("Type \"blue\" to toggle Blue LED.<br />");
+      server.println("<p> <form> <input type=\"text\" name=\"command\"><br> <input type=\"submit\" value=\"Submit\"> </form> </p>");      
+      StartSequence = false;
+    }
+    
+    time = millis();
+    while(client.connected())
+    {
+
+      while(client.available())
+      {
+        thing = client.read();
+        
+        if((char)thing == (char)"/n")
+        {
+          Serial.println(request);
+          request = "";
+        }
+        else
+        {
+          request += thing;
+        }
+        if((millis()-time)> 1000 && request != "")
+        {
+          Serial.println(request);
+          request = "";
+          time = millis();
+        }
+      }
+      
+
+  
+//        *input = client.read();
+//        if(*input == (int)"\n")
+//        {
+//          execute(compare(request));
+//          request = "";
+//          //send standard http response header
+//          client.println("HTTP/1.1 200 OK");
+//          client.println("Content-Type: text/html");
+//          client.println("Connection: close");
+//          client.println();
+//        }
+//        else
+//        {
+//          request += (char)*input;
+//        }
+     }
+      Serial.println("Client Disconnected");
+      StartSequence = true;
+      //delay(100);
+    }
+    
+  
+}
+
+int compare(String inp)
+{
+  if(inp == "red")
+  {
+      server.println("<p> red </p>");
+      return 100;
+  }
+  else if( inp == "blue")
+  {
+      server.println("<p> blue </p>");
+      return 200;
+  }
+  else
+  {
+    server.println("<p> not valid </p>");
+      return 00;
+  }
+}
+void execute(int inp)
+{
+  Serial.print(" server input ");
+  Serial.print(inp);
+  Serial.println("");
+  return;
+}
+
+
+/*
+ * if (client.available()) {
+        char c = client.read();
+
+        //read char by char HTTP request
+        if (readString.length() < 100) {
+
+          //store characters to string 
+          readString += c; 
+          //Serial.print(c);
+        } 
+
+        //if HTTP request has ended
+        if (c == '\n') {
+
+          ///////////////
+          Serial.println(readString); //print to serial monitor for debuging 
+
+          client.println("HTTP/1.1 200 OK"); //send new page
+          client.println("Content-Type: text/html");
+          client.println();
+
+          client.println("<HTML>");
+          client.println("<HEAD>");
+          client.println("<TITLE>Arduino GET test page</TITLE>");
+          client.println("</HEAD>");
+          client.println("<BODY>");
+
+          client.println("<H1>Zoomkat's simple Arduino button</H1>");
+          
+          client.println("<a href=\"/?on\">ON</a>"); 
+          client.println("<a href=\"/?off\">OFF</a>"); 
+
+          client.println("</BODY>");
+          client.println("</HTML>");
+
+          delay(1);
+          //stopping client
+          client.stop();
+ */
